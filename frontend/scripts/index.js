@@ -1,5 +1,4 @@
-const API_BASE_URL = window.location.origin.includes('localhost') && !window.location.port.includes('8080') ? "http://localhost:3000" : "/api"
-const CARDS_ENDPOINT = `${API_BASE_URL}/cards`
+const API_BASE_CANDIDATES = getApiBaseCandidates()
 
 const STORAGE_KEYS = {
   GAMES_IN_PROGRESS: "truco.gamesInProgress.v2",
@@ -433,18 +432,43 @@ function continueRoundResult() {
 async function fetchCards() {
   state.loadingCards = true
   state.cardsError = null
-  try {
-    const response = await fetch(CARDS_ENDPOINT)
-    if (!response.ok) {
-      throw new Error("No se pudieron obtener las cartas desde la API local")
+  let lastError = "No se pudieron obtener las cartas desde la API local"
+
+  for (const apiBaseUrl of API_BASE_CANDIDATES) {
+    const endpoint = `${apiBaseUrl}/cards`
+    try {
+      const response = await fetch(endpoint)
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
+      }
+
+      const payload = await response.json()
+      if (!Array.isArray(payload) || !payload.length) {
+        throw new Error("La API respondió sin cartas")
+      }
+
+      state.cards = payload
+      state.loadingCards = false
+      return
+    } catch (error) {
+      lastError = `${endpoint} -> ${error?.message || "Error inesperado de red"}`
     }
-    const payload = await response.json()
-    state.cards = payload
-  } catch (error) {
-    state.cardsError = error.message || "Error inesperado de red"
-  } finally {
-    state.loadingCards = false
   }
+
+  state.cardsError = lastError
+  state.loadingCards = false
+}
+
+function getApiBaseCandidates() {
+  const hostname = window.location.hostname
+  const bases = ["/api"]
+
+  if (hostname && hostname !== "localhost" && hostname !== "127.0.0.1") {
+    bases.push(`http://${hostname}:3000`)
+  }
+
+  bases.push("http://localhost:3000")
+  return [...new Set(bases)]
 }
 
 function hydrateGamesFromStorage() {
