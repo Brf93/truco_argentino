@@ -45,6 +45,16 @@ const THINKING_MESSAGES = [
   "Te la dejo picando, vos verás...",
 ]
 
+function createId() {
+  const randomUuid = globalThis.crypto?.randomUUID
+  if (typeof randomUuid === "function") {
+    return randomUuid.call(globalThis.crypto)
+  }
+
+  const randomPart = Math.random().toString(36).slice(2, 10)
+  return `id-${Date.now().toString(36)}-${randomPart}`
+}
+
 function getClosedRoundResultModal() {
   return {
     open: false,
@@ -103,7 +113,7 @@ function _getGameToastContainer() {
 }
 
 function addGameToast(message) {
-  const id = crypto.randomUUID()
+  const id = createId()
   state.gameToasts.push({ id, clearable: false })
 
   const container = _getGameToastContainer()
@@ -577,7 +587,7 @@ function migrateGameToV2(game) {
   const now = new Date().toISOString()
   const migrated = { ...game }
 
-  migrated.id = migrated.id || crypto.randomUUID()
+  migrated.id = migrated.id || createId()
   migrated.createdAt = migrated.createdAt || now
   migrated.updatedAt = migrated.updatedAt || now
   migrated.status = migrated.status || "in_progress"
@@ -625,7 +635,7 @@ function migrateFinishedGameToV2(game) {
       ? game.winner
       : MACHINE
   return {
-    id: game.id || crypto.randomUUID(),
+    id: game.id || createId(),
     createdAt: game.createdAt || now,
     updatedAt: game.updatedAt || game.finishedAt || now,
     finishedAt: game.finishedAt || game.updatedAt || now,
@@ -743,7 +753,7 @@ async function confirmCloseOldestAndCreate() {
 
 function createNewGame(mode, humanName) {
   const game = {
-    id: crypto.randomUUID(),
+    id: createId(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     status: "in_progress",
@@ -1817,7 +1827,7 @@ function stopMachineThinking(game) {
 function addLog(game, message) {
   if (!game) return
   game.log.unshift({
-    id: crypto.randomUUID(),
+    id: createId(),
     at: new Date().toISOString(),
     message
   })
